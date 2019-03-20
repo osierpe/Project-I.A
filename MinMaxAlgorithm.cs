@@ -4,16 +4,16 @@ using System.Collections.Generic;
 using UnityEngine;
 using DeepCopyExtensions;
 
-public class MinMaxAlgorithm: MoveMaker
+public class MinMaxAlgorithm : MoveMaker
 {
     State movimento;
     float valor;
     public EvaluationFunction evaluator;
-    private UtilityFunction utilityfunc; 
+    private UtilityFunction utilityfunc;
     public int depth = 0;
     private PlayerController MaxPlayer;
     private PlayerController MinPlayer;
-    
+
     public MinMaxAlgorithm(PlayerController MaxPlayer, EvaluationFunction eval, UtilityFunction utilf, PlayerController MinPlayer)
     {
         this.MaxPlayer = MaxPlayer;
@@ -25,13 +25,13 @@ public class MinMaxAlgorithm: MoveMaker
     public override State MakeMove()
     {
         // The move is decided by the selected state
-        return GenerateNewState(); 
+        return GenerateNewState();
     }
 
     private State GenerateNewState()
     {
         // Creates initial state
-        State newState = new State(this.MaxPlayer, this.MinPlayer); 
+        State newState = new State(this.MaxPlayer, this.MinPlayer);
         // Call the MinMax implementation
         State bestMove = MinMax(newState);
         // returning the actual state. You should modify this
@@ -40,90 +40,112 @@ public class MinMaxAlgorithm: MoveMaker
 
     public State MinMax(State e)
     {
-        /////////////////////////////
-        // You should implement this
-        
-        valor = Valmax(e); //chama a função do valor maximo
-        return movimento;  // retorna movimento associado ao maior valor 
-        
-        /////////////////////////////
-        
+        valor = Valmax(e); //Calls Valmax in initial state
+        return movimento;  // Returns move associated with the greatest value
     }
+
+
     public float Valmax(State s)
     {
-        if ((s.depth % 2)==0 & s.depth !=0)
+        if (s.depth != 0)
+        {
+            s = new State(s);
+        }
+
+        //Using Utility function in case of GAME OVER (in which case either of sides will have no units left)
+        //GAME OVER -> Final State
+        if (s.AdversaryUnits.Count == 0 || s.PlayersUnits.Count == 0)
+        {
+            s.Score = utilityfunc.evaluate(s, true);
+        }
+
+        // Base Case for Recursivity
+        if (s.depth >= 2)
         {
             valor = evaluator.evaluate(s);
-           
-            
             return valor;
         }
+
+        // Setting Value to -infinity
         valor = -9999999;
-        List<State> estadosfilhos1 = GeneratePossibleStates(s); //generate children
+        // Generating children
+        List<State> estadosfilhos1 = GeneratePossibleStates(s);
+
         float tmp;
-        
-        Debug.Log("filhos da camada"+s.depth+" = "+ estadosfilhos1.Count);
+
         for (int i = 0; i < estadosfilhos1.Count; i++)
         {
             tmp = valor;
-            
-            State ss = new State(estadosfilhos1[i]);
-            valor = Math.Max(valor, Valmin(ss));
-            if (s.isRoot && (tmp < valor))
-                
-                movimento = estadosfilhos1[i];//guarda movimento associado ao maior valor
+            valor = Math.Max(valor, Valmin(((estadosfilhos1[i]))));
+
+            //If ValMax is at Root and the tmp is different from val, we set this child as movement since it has biggest value
+            if ((s.isRoot) && (tmp != valor))
+            {
+                movimento = estadosfilhos1[i]; //Saves move associated with greatest value
+            }
         }
-        
         return valor;
     }
-    public float Valmin(State st)
+
+    public float Valmin(State s)
     {
-        if ((st.depth % 2)== 0 & st.depth!=0)
+        s = new State(s);
+
+        //Using UtilityFunc in case of GAME OVER (in which case either of sides will have no units left)
+        //GAME OVER -> Final State
+        if(s.AdversaryUnits.Count == 0 || s.PlayersUnits.Count == 0)
         {
-            
-            valor = evaluator.evaluate(st);
-            
+            s.Score = utilityfunc.evaluate(s, false);
+        }
+
+        // Base Case for Recursivity
+        if ((s.depth >= 2))
+        {
+            valor = evaluator.evaluate(s);
             return valor;
         }
-       
-        valor = 9999999;
-        List<State> estadosfilhos2 = GeneratePossibleStates(st); //generate children
-        Debug.Log("filhos da camada" + st.depth + " = " + estadosfilhos2.Count);
-        for (int i = 0; i < estadosfilhos2.Count; i++)
-        {
-            State sta = new State(estadosfilhos2[i]);
-            valor = Math.Min(valor, Valmax(sta));
 
+        //Setting Value to +infinity
+        valor = 9999999;
+
+        // Generating Children
+        List<State> estadosfilhos1 = GeneratePossibleStates((s));
+
+        // Iterating through generated children and retrieving Minimum Value
+        for (int i = 0; i < estadosfilhos1.Count; i++)
+        {
+            valor = Math.Min(valor, Valmax((estadosfilhos1[i])));
         }
-        
         return valor;
     }
+
+
     private List<State> GeneratePossibleStates(State state)
     {
         List<State> states = new List<State>();
         //Generate the possible states available to expand
-        foreach(Unit currentUnit in state.PlayersUnits)
+        foreach (Unit currentUnit in state.PlayersUnits)
         {
             // Movement States
             List<Tile> neighbours = currentUnit.GetFreeNeighbours(state);
-            Debug.Log(currentUnit.id+" posição "+currentUnit.x+" , "+currentUnit.y+" pode mover em "+neighbours.Count);
-            
+            Debug.Log(currentUnit.id + " posição " + currentUnit.x + " , " + currentUnit.y + " pode mover em " + neighbours.Count);
+
             foreach (Tile t in neighbours)
             {
                 State newState = new State(state, currentUnit, true);
                 newState = MoveUnit(newState, t);
                 states.Add(newState);
-                
+
             }
             // Attack states
             List<Unit> attackOptions = currentUnit.GetAttackable(state, state.AdversaryUnits);
-            Debug.Log("unidade corrente "+currentUnit.id+" opçoes para ataque "+ attackOptions.Count);
+            Debug.Log("unidade corrente " + currentUnit.id + " opçoes para ataque " + attackOptions.Count);
             foreach (Unit t in attackOptions)
             {
                 State newState = new State(state, currentUnit, false);
                 newState = AttackUnit(newState, t);
                 states.Add(newState);
-               
+
             }
 
         }
@@ -136,7 +158,7 @@ public class MinMaxAlgorithm: MoveMaker
         return states;
     }
 
-    private State MoveUnit(State state,  Tile destination)
+    private State MoveUnit(State state, Tile destination)
     {
         Unit currentUnit = state.unitToPermormAction;
         //First: Update Board
