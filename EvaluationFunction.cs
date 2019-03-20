@@ -8,8 +8,6 @@ public class EvaluationFunction
     public float evaluate(State s)
     {
         float val = 0;
-        float enemyHP = 0f;
-        float allyHP = 0f;
 
         Unit current = s.unitToPermormAction;
         Tuple<float, float> bonus = current.GetBonus(s.board, s.PlayersUnits); //(currentHpBonus, currentAttackBonus)
@@ -17,7 +15,7 @@ public class EvaluationFunction
         //Sum of our HP and adding "2 to the power of AttackableUnits" to val
         for (int i = 0; i < s.PlayersUnits.Count; i++)
         {
-            allyHP += s.PlayersUnits[i].hp;
+            val += s.PlayersUnits[i].hp;
 
             int count = s.PlayersUnits[i].GetAttackable().Count;
             if (count > 0)
@@ -30,7 +28,7 @@ public class EvaluationFunction
         //Sum of enemy's HP
         for (int k = 0; k < s.AdversaryUnits.Count; k++)
         {
-            enemyHP += s.AdversaryUnits[k].hp;
+            val -= s.AdversaryUnits[k].hp;
         }
         
         if (s.isAttack) // If Attack State
