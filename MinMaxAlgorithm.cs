@@ -62,7 +62,6 @@ public class MinMaxAlgorithm : MoveMaker
         // Base Case for Recursivity
         if (MaxPlayer.ExpandedNodes >= MaxPlayer.MaximumNodesToExpand) 
         {
-            s = new State(s);
             valor = evaluator.evaluate(s);
             return valor;
         }
@@ -102,6 +101,7 @@ public class MinMaxAlgorithm : MoveMaker
         // Base Case for Recursivity
         if (MaxPlayer.ExpandedNodes >= MaxPlayer.MaximumNodesToExpand) 
         {
+            s = new State(s);
             valor = evaluator.evaluate(s);
             return valor;
         }
