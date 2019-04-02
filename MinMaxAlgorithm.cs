@@ -40,6 +40,7 @@ public class MinMaxAlgorithm : MoveMaker
 
     public State MinMax(State e)
     {
+        MaxPlayer.ExpandedNodes = 0;
         valor = Valmax(e); //Calls Valmax in initial state
         return movimento;  // Returns move associated with the greatest value
     }
