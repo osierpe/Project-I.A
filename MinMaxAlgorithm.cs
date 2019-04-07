@@ -1,4 +1,6 @@
-﻿using System;
+//MINMAX CANONICAL
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -48,6 +50,7 @@ public class MinMaxAlgorithm : MoveMaker
 
     public float Valmax(State s)
     {
+        //If s is not root then we switch perspective
         if (s.depth != 0)
         {
             s = new State(s);
@@ -57,13 +60,14 @@ public class MinMaxAlgorithm : MoveMaker
         //GAME OVER -> Final State
         if (s.AdversaryUnits.Count == 0 || s.PlayersUnits.Count == 0)
         {
-            s.Score = utilityfunc.evaluate(s, true);
+            valor = utilityfunc.evaluate(s, true);
+            return valor;
         }
 
-        // Base Case for Recursivity
-        if (MaxPlayer.ExpandedNodes >= MaxPlayer.MaximumNodesToExpand) 
+        // Base Case for Recursivity (using number of expanded nodes as instructed by professors)
+        if (MaxPlayer.ExpandedNodes >= MaxPlayer.MaximumNodesToExpand)
         {
-            valor = evaluator.evaluate(s);
+            valor = evaluator.evaluate(s, true);
             return valor;
         }
 
@@ -78,7 +82,7 @@ public class MinMaxAlgorithm : MoveMaker
         {
             tmp = valor;
             valor = Math.Max(valor, Valmin(((estadosfilhos1[i]))));
-
+            Debug.Log("Valmax abrir filho " + i + " com depth " + estadosfilhos1[i].depth);
             //If ValMax is at Root and the tmp is different from val, we set this child as movement since it has biggest value
             if ((s.isRoot) && (tmp != valor))
             {
@@ -94,16 +98,16 @@ public class MinMaxAlgorithm : MoveMaker
 
         //Using UtilityFunc in case of GAME OVER (in which case either of sides will have no units left)
         //GAME OVER -> Final State
-        if(s.AdversaryUnits.Count == 0 || s.PlayersUnits.Count == 0)
+        if (s.AdversaryUnits.Count == 0 || s.PlayersUnits.Count == 0)
         {
-            s.Score = utilityfunc.evaluate(s, false);
+            valor = utilityfunc.evaluate(s, false);
+            return valor;
         }
 
-        // Base Case for Recursivity
-        if (MaxPlayer.ExpandedNodes >= MaxPlayer.MaximumNodesToExpand) 
+        // Base Case for Recursivity (using number of expanded nodes as instructed by professors)
+        if (MaxPlayer.ExpandedNodes >= MaxPlayer.MaximumNodesToExpand)
         {
-            s = new State(s);
-            valor = evaluator.evaluate(s);
+            valor = evaluator.evaluate(new State(s), false);
             return valor;
         }
 
@@ -117,6 +121,7 @@ public class MinMaxAlgorithm : MoveMaker
         for (int i = 0; i < estadosfilhos1.Count; i++)
         {
             valor = Math.Min(valor, Valmax((estadosfilhos1[i])));
+            Debug.Log("Valmin abrir filho " + i + " com depth " + estadosfilhos1[i].depth);
         }
         return valor;
     }
@@ -124,32 +129,30 @@ public class MinMaxAlgorithm : MoveMaker
 
     private List<State> GeneratePossibleStates(State state)
     {
+        
+         //Only changed the order of the "Attack states" and the "Movement States" code parts
+         //so as to first insert Attack states and then the Movement States
+         
         List<State> states = new List<State>();
         //Generate the possible states available to expand
         foreach (Unit currentUnit in state.PlayersUnits)
         {
-            // Movement States
-            List<Tile> neighbours = currentUnit.GetFreeNeighbours(state);
-            Debug.Log(currentUnit.id + " posição " + currentUnit.x + " , " + currentUnit.y + " pode mover em " + neighbours.Count);
-
-            foreach (Tile t in neighbours)
-            {
-                State newState = new State(state, currentUnit, true);
-                newState = MoveUnit(newState, t);
-                states.Add(newState);
-
-            }
             // Attack states
             List<Unit> attackOptions = currentUnit.GetAttackable(state, state.AdversaryUnits);
-            Debug.Log("unidade corrente " + currentUnit.id + " opçoes para ataque " + attackOptions.Count);
             foreach (Unit t in attackOptions)
             {
                 State newState = new State(state, currentUnit, false);
                 newState = AttackUnit(newState, t);
                 states.Add(newState);
-
             }
-
+            // Movement States
+            List<Tile> neighbours = currentUnit.GetFreeNeighbours(state);
+            foreach (Tile t in neighbours)
+            {
+                State newState = new State(state, currentUnit, true);
+                newState = MoveUnit(newState, t);
+                states.Add(newState);
+            }
         }
 
         // YOU SHOULD NOT REMOVE THIS
@@ -186,11 +189,17 @@ public class MinMaxAlgorithm : MoveMaker
         attacked.hp += Math.Min(0, (attackedUnitBonus.Item1)) - (currentUnitBonus.Item2 + currentUnit.attack);
         state.unitAttacked = attacked;
 
+        state.board[attacked.x, attacked.y] = attacked;
+        int index = state.AdversaryUnits.IndexOf(attacked);
+        state.AdversaryUnits[index] = attacked;
+
+
+
         if (attacked.hp <= 0)
         {
             //Board update by killing the unit!
             state.board[attacked.x, attacked.y] = null;
-            int index = state.AdversaryUnits.IndexOf(attacked);
+            index = state.AdversaryUnits.IndexOf(attacked);
             state.AdversaryUnits.RemoveAt(index);
 
         }
